@@ -21,6 +21,13 @@ blueprint:
           domain:
           - light
           multiple: false
+    last_transition_state:
+      name: Last Transition State
+      selector:
+        entity:
+          domain:
+          - input_number
+          multiple: false
     hold_threshold:
       name: Hold threshold
       description: Time to consider button is being held, instead of just pushed.
@@ -43,7 +50,7 @@ blueprint:
           unit_of_measurement: 's'
           mode: slider
           step: 0.1
-    brightness_transition_minimum_pct:
+    brightness_transition_minimum:
       name: Lower brightness bound
       description: Lower bound for brightness transition.
       default: 0.1
@@ -54,7 +61,7 @@ blueprint:
           unit_of_measurement: '%'
           mode: slider
           step: 0.1
-    brightness_transition_maximum_pct:
+    brightness_transition_maximum:
       name: Upper brightness bound
       description: Upper bound for brightness transition.
       default: 100.0
@@ -66,12 +73,16 @@ blueprint:
           mode: slider
           step: 0.1
   source_url: https://github.com/HairingX/homeassistant/blob/main/blueprints/single-button-on-off-dim-switch.yaml
-mode: single
+mode: queued
+max: 2
 trigger:
 - platform: state
   entity_id: !input button
   to: 'on'
 action:
+- variables:
+    entity_id_light: !input light
+    initial_brightness: '{{ state_attr(entity_id_light, "brightness") | float(0) }}'
 - wait_for_trigger:
   - platform: state
     entity_id: !input button
@@ -85,23 +96,51 @@ action:
       value_template: '{{ wait.trigger == none }}'
     sequence:
       - variables:
-          entity_id: !input light
+          entity_id_last_transition_state: !input last_transition_state
           brightness_transition_length: !input brightness_transition_length
           brightness_transition_minimum: !input brightness_transition_minimum
           brightness_transition_maximum: !input brightness_transition_maximum
-          brightness_transition_direction: '{{ -1 if initial_brightness > 130 else 1 }}'
-          initial_brightness: '{{ state_attr(entity_id, "brightness") | float(0) }}'
-          minimum_brightness: '{{ (1, brightness_transition_minimum * 2.55) | max }}'
-          maximum_brightness: '{{ (255, (brightness_transition_minimum, brightness_transition_maximum) | max * 2.55) | min }}'
-          brightness_range: '{{ maximum_brightness - minimum_brightness }}'
-          brightness_target_value: '{{ 1 if brightness_transition_direction < 0 else maximum_brightness }}'
+          minimum_brightness: '{{ (1, brightness_transition_minimum * 2.55) | max | round }}'
+          maximum_brightness: '{{ (255, (brightness_transition_minimum, brightness_transition_maximum) | max * 2.55) | min | round }}'
+          brightness_interval: '{{ maximum_brightness - minimum_brightness }}'
+          brightness_direction: >
+            {% if states(entity_id_last_transition_state) | int != 0 %}
+              {{ states(entity_id_last_transition_state) | int * -1 }}
+            {% elif initial_brightness > 130 %}
+              -1
+            {% else %}
+              1
+            {% endif %}
+          brightness_target_value: '{{ minimum_brightness if brightness_direction < 0 else maximum_brightness }}'
           brightness_change_diff: '{{ (brightness_target_value - initial_brightness) | abs }}' 
-          brightness_change_time: '{{ brightness_transition_length / brightness_range * brightness_change_diff }}' 
+          brightness_change_time: '{{ brightness_transition_length / brightness_interval * brightness_change_diff }}' 
+
+      - service: system_log.write
+        data:
+          level: info
+          message: '{{ initial_brightness }}'
+      - service: system_log.write
+        data:
+          level: info
+          message: '{{ brightness_direction }}'
+      - service: system_log.write
+        data:
+          level: info
+          message: '{{ brightness_change_time }}'
+      - service: system_log.write
+        data:
+          level: info
+          message: '{{ brightness_target_value }}'
+
       - service: light.turn_on
         entity_id: !input light
         data:
           transition: '{{ brightness_change_time }}'
           brightness: '{{ brightness_target_value }}'
+      - service: input_number.set_value
+        entity_id: !input last_transition_state
+        data:
+          value: '{{ brightness_direction }}'
       - wait_for_trigger:
         - platform: state
           entity_id: !input button
@@ -113,11 +152,33 @@ action:
           - condition: template
             value_template: '{{ wait.remaining > 0 }}'
           sequence:
+          - service: system_log.write
+            data:
+              level: info
+              message: '{{ brightness_interval }}'
           - service: light.turn_on
             entity_id: !input light
             data:
               transition: 0
-              brightness: '{{ initial_brightness + (brightness_range / brightness_transition_length) * (brightness_change_time - wait.remaining) * brightness_transition_direction }}'
+              brightness: '{{ initial_brightness + (brightness_change_diff / brightness_change_time) * (brightness_change_time - wait.remaining) * brightness_direction }}'
+          - delay: 1
   default:
-  - service: light.toggle
-    entity_id: !input light
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ initial_brightness > 0 }}'
+      sequence:
+        - service: light.turn_off
+          entity_id: !input light
+        - service: input_number.set_value
+          entity_id: !input last_transition_state
+          data:
+            value: -1
+    default:
+    - service: light.turn_on
+      entity_id: !input light
+    - service: input_number.set_value
+      entity_id: !input last_transition_state
+      data:
+        value: 1
+
