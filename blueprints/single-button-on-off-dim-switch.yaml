@@ -103,6 +103,11 @@ action:
                             transition: !input transition_step_length
                             brightness_step_pct: "{{ brightness_step_pct_negative }}"
                           entity_id: !input light
+                        - delay:
+                            hours: 0
+                            minutes: 0
+                            seconds: !input transition_step_length
+                            milliseconds: 0
             default:
               # otherwise, dim up
               - repeat:
@@ -116,6 +121,11 @@ action:
                         transition: !input transition_step_length
                         brightness_step_pct: "{{ brightness_step_pct_positive }}"
                       entity_id: !input light
+                    - delay:
+                        hours: 0
+                        minutes: 0
+                        seconds: !input transition_step_length
+                        milliseconds: 0
 
     # when trigger came (button has been released within timeout)
     default:
