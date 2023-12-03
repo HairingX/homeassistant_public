@@ -82,7 +82,6 @@ trigger:
 action:
 - variables:
     entity_id_light: !input light
-    initial_brightness: '{{ state_attr(entity_id_light, "brightness") | float(0) }}'
 - wait_for_trigger:
   - platform: state
     entity_id: !input button
@@ -96,6 +95,7 @@ action:
       value_template: '{{ wait.trigger == none }}'
     sequence:
       - variables:
+          initial_brightness: '{{ state_attr(entity_id_light, "brightness") | float(0) }}' # must be placed after hold_threshold, to handle Hue lights correctly (Hue 1 change/second bridge limit).
           entity_id_last_transition_state: !input last_transition_state
           brightness_transition_length: !input brightness_transition_length
           brightness_transition_minimum: !input brightness_transition_minimum
@@ -161,8 +161,9 @@ action:
             data:
               transition: 0
               brightness: '{{ initial_brightness + (brightness_change_diff / brightness_change_time) * (brightness_change_time - wait.remaining) * brightness_direction }}'
-          - delay: 1
   default:
+  - variables:
+      initial_brightness: '{{ state_attr(entity_id_light, "brightness") | float(0) }}'
   - choose:
     - conditions:
       - condition: template
