@@ -82,6 +82,7 @@ trigger:
 action:
 - variables:
     entity_id_light: !input light
+    entity_id_button: !input button
 - wait_for_trigger:
   - platform: state
     entity_id: !input button
@@ -145,12 +146,12 @@ action:
         - platform: state
           entity_id: !input button
           to: 'off'
-        timeout: '{{ brightness_change_time }}'
+        timeout: '{{ brightness_change_time if states(entity_id_button) == "on" else 0 }}'
         continue_on_timeout: true
       - choose:
         - conditions:
           - condition: template
-            value_template: '{{ wait.remaining > 0 }}'
+            value_template: '{{ wait.remaining > 0 or states(entity_id_button) == "off"}}'
           sequence:
           - service: system_log.write
             data:
@@ -160,7 +161,12 @@ action:
             entity_id: !input light
             data:
               transition: 0
-              brightness: '{{ initial_brightness + (brightness_change_diff / brightness_change_time) * (brightness_change_time - wait.remaining) * brightness_direction }}'
+              brightness: >
+                {% if wait.remaining > 0 %}
+                  {{ initial_brightness + ((brightness_change_diff / brightness_change_time) * (brightness_change_time - wait.remaining) - 1) * brightness_direction }}
+                {% else %}
+                  {{ (minimum_brightness, (maximum_brightness, initial_brightness + 2 * brightness_direction) | min) | max }}
+                {% endif %}
   default:
   - variables:
       initial_brightness: '{{ state_attr(entity_id_light, "brightness") | float(0) }}'
