@@ -1,5 +1,5 @@
 blueprint:
-  name: Single button dim switch
+  name: Single button advanced light switch
   description: Switch a light on/off by pressing a button. Dim it up/down (depending
     on it's current state) by holding the same button.
   domain: automation
@@ -23,6 +23,9 @@ blueprint:
           multiple: false
     last_transition_state:
       name: Last Transition State
+      description: Keeps the last dim transition direction, to do the opposite next. 
+        If left blank, light will dim down when above 50% brightness and down when below it.
+      default: {}
       selector:
         entity:
           domain:
@@ -103,18 +106,18 @@ action:
           brightness_transition_maximum: !input brightness_transition_maximum
           minimum_brightness: '{{ (1, brightness_transition_minimum * 2.55) | max | round }}'
           maximum_brightness: '{{ (255, (brightness_transition_minimum, brightness_transition_maximum) | max * 2.55) | min | round }}'
-          brightness_interval: '{{ maximum_brightness - minimum_brightness }}'
+          brightness_range: '{{ maximum_brightness - minimum_brightness }}'
           brightness_direction: >
-            {% if states(entity_id_last_transition_state) | int != 0 %}
+            {% if not not last_transition_state and states(entity_id_last_transition_state) | int != 0 %}
               {{ states(entity_id_last_transition_state) | int * -1 }}
-            {% elif initial_brightness > 130 %}
+            {% elif initial_brightness > brightness_range / 2 %}
               -1
             {% else %}
               1
             {% endif %}
           brightness_target_value: '{{ minimum_brightness if brightness_direction < 0 else maximum_brightness }}'
           brightness_change_diff: '{{ (brightness_target_value - initial_brightness) | abs }}' 
-          brightness_change_time: '{{ brightness_transition_length / brightness_interval * brightness_change_diff }}' 
+          brightness_change_time: '{{ brightness_transition_length / brightness_range * brightness_change_diff }}' 
 
 #debug logging BEGIN
       - service: system_log.write
@@ -140,10 +143,15 @@ action:
         data:
           transition: '{{ brightness_change_time }}'
           brightness: '{{ brightness_target_value }}'
-      - service: input_number.set_value
-        entity_id: !input last_transition_state
-        data:
-          value: '{{ brightness_direction }}'
+      - choose:
+        - conditions:
+          - condition: template
+            value_template: '{{ not not last_transition_state }}'
+          sequence:
+          - service: input_number.set_value
+            entity_id: !input last_transition_state
+            data:
+              value: '{{ brightness_direction }}'
       - wait_for_trigger:
         - platform: state
           entity_id: !input button
@@ -160,7 +168,7 @@ action:
           - service: system_log.write
             data:
               level: info
-              message: '{{ brightness_interval }}'
+              message: '{{ brightness_range }}'
 #debug logging END
 
           - service: light.turn_on
