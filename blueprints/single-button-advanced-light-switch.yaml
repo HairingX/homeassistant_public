@@ -109,7 +109,7 @@ action:
           maximum_brightness: '{{ (255, (brightness_transition_minimum, brightness_transition_maximum) | max * 2.55) | min | round }}'
           brightness_range: '{{ maximum_brightness - minimum_brightness }}'
           brightness_direction: >
-            {% if not not last_transition_state and states(entity_id_last_transition_state) | int != 0 %}
+            {% if not not entity_id_last_transition_state and states(entity_id_last_transition_state) | int != 0 %}
               {{ states(entity_id_last_transition_state) | int * -1 }}
             {% elif initial_brightness > brightness_range / 2 %}
               -1
@@ -147,7 +147,7 @@ action:
       - choose:
         - conditions:
           - condition: template
-            value_template: '{{ not not last_transition_state }}'
+            value_template: '{{ not not entity_id_last_transition_state }}'
           sequence:
           - service: input_number.set_value
             entity_id: !input last_transition_state
