@@ -201,7 +201,7 @@ action:
                   - service: light.turn_on
                     entity_id: !input light
                     data:
-                      transition: {{ brightness_transition_overshoot_transition_length }} 
+                      transition: "{{ brightness_transition_overshoot_transition_length }}"
                       brightness: >
                         {% if wait.remaining > 0 %}
                           {{ initial_brightness + ((brightness_change_diff / brightness_change_time) * (brightness_change_time - wait.remaining) - brightness_transition_overshoot_value) * brightness_direction }}
