@@ -63,8 +63,8 @@ blueprint:
       default: 0
       selector:
         number:
-          min: -5
-          max: 5
+          min: -50
+          max: 50
           unit_of_measurement: "brightness"
           mode: slider
           step: 1
