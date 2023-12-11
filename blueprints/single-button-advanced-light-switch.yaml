@@ -57,7 +57,7 @@ blueprint:
     brightness_transition_overshoot_correction:
       name: Overshoot correction
       description: Overshoot correction for brightness transition.
-      default: 1.0
+      default: 0.0
       selector:
         number:
           min: -5.0
