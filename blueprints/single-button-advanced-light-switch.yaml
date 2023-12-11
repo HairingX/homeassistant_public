@@ -54,6 +54,17 @@ blueprint:
           unit_of_measurement: 's'
           mode: slider
           step: 0.1
+    brightness_transition_overshoot_correction:
+      name: Overshoot correction
+      description: Overshoot correction for brightness transition.
+      default: 1.0
+      selector:
+        number:
+          min: -5.0
+          max: 5.0
+          unit_of_measurement: 'brightness'
+          mode: slider
+          step: 0.1
     brightness_transition_minimum:
       name: Lower brightness bound
       description: Lower bound for brightness transition.
@@ -105,6 +116,7 @@ action:
           brightness_transition_length: !input brightness_transition_length
           brightness_transition_minimum: !input brightness_transition_minimum
           brightness_transition_maximum: !input brightness_transition_maximum
+          brightness_transition_overshoot_correction: !input brightness_transition_overshoot_correction
           minimum_brightness: '{{ (1, brightness_transition_minimum * 2.55) | max | round }}'
           maximum_brightness: '{{ (255, (brightness_transition_minimum, brightness_transition_maximum) | max * 2.55) | min | round }}'
           brightness_range: '{{ maximum_brightness - minimum_brightness }}'
@@ -178,7 +190,7 @@ action:
               transition: 0
               brightness: >
                 {% if wait.remaining > 0 %}
-                  {{ initial_brightness + ((brightness_change_diff / brightness_change_time) * (brightness_change_time - wait.remaining) - 1) * brightness_direction }}
+                  {{ initial_brightness + ((brightness_change_diff / brightness_change_time) * (brightness_change_time - wait.remaining) - brightness_transition_overshoot_correction) * brightness_direction }}
                 {% else %}
                   {{ (minimum_brightness, (maximum_brightness, initial_brightness + 2 * brightness_direction) | min) | max }}
                 {% endif %}
