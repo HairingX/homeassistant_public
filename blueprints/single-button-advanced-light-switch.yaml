@@ -204,7 +204,7 @@ action:
                       transition: "{{ brightness_transition_overshoot_transition_length }}"
                       brightness: >
                         {% if wait.remaining > 0 %}
-                          {{ initial_brightness + ((brightness_change_diff / brightness_change_time) * (brightness_change_time - wait.remaining) - brightness_transition_overshoot_value) * brightness_direction }}
+                          {{ initial_brightness + ((brightness_change_diff / brightness_change_time) * (brightness_change_time - wait.remaining) + brightness_transition_overshoot_value) * brightness_direction }}
                         {% else %}
                           {{ (minimum_brightness, (maximum_brightness, initial_brightness + 2 * brightness_direction) | min) | max }}
                         {% endif %}
