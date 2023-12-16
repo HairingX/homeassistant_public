@@ -28,7 +28,7 @@ blueprint:
       name: Last Transition State
       description:
         Keeps the last dim transition direction, to do the opposite next.
-        If left blank, light will dim down when above 50% brightness and down when below it.
+        If left blank, light will dim down when above 50% brightness and up when below it.
       default:
       selector:
         entity:
