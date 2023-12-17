@@ -26,6 +26,17 @@ blueprint:
           step: 1
           unit_of_measurement: s
           mode: slider
+    volume_pct:
+      name: Volume
+      description: The volume the speaker will play at
+      default: 80
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          unit_of_measurement: '%'
+          mode: slider
   source_url: https://github.com/HairingX/homeassistant/blob/main/blueprints/alarm-speaker.yaml
 mode: restart
 trigger:
@@ -40,11 +51,16 @@ action:
       alarm_trigger: !input alarm_trigger
       media: !input media
       loop_length: !input loop_length
+      volume_pct: !input volume_pct
   - choose:
       - conditions:
           - condition: template
             value_template: '{{states(alarm_trigger) == "on"}}'
         sequence:
+          - service: media_player.volume_set
+            data: 
+              entity_id: '{{media.entity_id}}'
+              volume_level: '{{volume_pct / 100}}'
           - repeat:
               sequence:
                 - service: media_player.play_media
@@ -59,9 +75,9 @@ action:
                 - condition: template
                   value_template: '{{ states(alarm_trigger) != "on" }}'
     default:
-      - service: media_player.clear_playlist
+      - service: media_player.media_stop
         data: 
           entity_id: '{{media.entity_id}}'
-      - service: media_player.media_stop
+      - service: media_player.clear_playlist
         data: 
           entity_id: '{{media.entity_id}}'
