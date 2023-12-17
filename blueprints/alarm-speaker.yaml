@@ -1,0 +1,67 @@
+blueprint:
+  name: Alarm Speaker
+  description: Speaker sounds for when the alarm has triggered
+  domain: automation
+  input:
+    alarm_trigger:
+      name: Trigger
+      description: The trigger that activates and deactivates the alarm-light.
+      selector:
+        entity:
+          domain:
+            - input_boolean
+    media:
+      name: Media
+      description: Media being played.
+      selector:
+        media:
+    loop_length:
+      name: Loop length
+      description: Loop time.
+      default: 3
+      selector:
+        number:
+          min: 1
+          max: 600
+          step: 1
+          unit_of_measurement: s
+          mode: slider
+  source_url: https://github.com/HairingX/homeassistant/blob/main/blueprints/alarm-speaker.yaml
+mode: restart
+trigger:
+  - platform: state
+    entity_id: !input alarm_trigger
+    to: "on"
+  - platform: state
+    entity_id: !input alarm_trigger
+    to: "off"
+action:
+  - variables:
+      alarm_trigger: !input alarm_trigger
+      media: !input media
+      loop_length: !input loop_length
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: '{{states(alarm_trigger) == "on"}}'
+        sequence:
+          - repeat:
+              sequence:
+                - service: media_player.play_media
+                  data: 
+                    entity_id: '{{media.entity_id}}'
+                    media_content_id: '{{media.media_content_id}}'
+                    media_content_type: '{{media.media_content_type}}'
+                    enqueue: 'next'
+                - delay:
+                    seconds: '{{loop_length}}'
+              until:
+                - condition: template
+                  value_template: '{{ states(alarm_trigger) != "on" }}'
+    default:
+      - service: media_player.clear_playlist
+        data: 
+          entity_id: '{{media.entity_id}}'
+      - service: media_player.media_stop
+        data: 
+          entity_id: '{{media.entity_id}}'

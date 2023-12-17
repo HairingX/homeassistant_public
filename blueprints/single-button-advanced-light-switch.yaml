@@ -58,8 +58,8 @@ blueprint:
           mode: slider
           step: 0.1
     brightness_transition_overshoot_value:
-      name: Overshoot correction amount
-      description: Overshoot correction amount for brightness transition.
+      name: Overshoot amount
+      description: Amount of overshoot when transitioning brightness.
       default: 0
       selector:
         number:
