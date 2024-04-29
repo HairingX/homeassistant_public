@@ -74,10 +74,14 @@ action:
               until:
                 - condition: template
                   value_template: '{{ states(alarm_trigger) != "on" }}'
-    default:
-      - service: media_player.media_stop
-        data: 
-          entity_id: '{{media.entity_id}}'
-      - service: media_player.clear_playlist
-        data: 
-          entity_id: '{{media.entity_id}}'
+          - service: media_player.media_stop
+            data: 
+              entity_id: '{{media.entity_id}}'
+          - service: media_player.clear_playlist
+            data: 
+              entity_id: '{{media.entity_id}}'
+          - service: media_player.volume_set
+            data: 
+              entity_id: '{{media.entity_id}}'
+              volume_level: 0.3
+          

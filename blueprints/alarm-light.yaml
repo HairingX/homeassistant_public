@@ -75,4 +75,14 @@ action:
               until:
                 - condition: template
                   value_template: '{{states(alarm_trigger) != "on"}}'
-      
+          - service: light.turn_off
+            data:
+              transition: 1
+            target:
+              entity_id: '{{always_on_light}}'
+          - service: light.turn_off
+            data:
+              transition: 1
+            target:
+              entity_id: '{{flashing_light}}'
+          
